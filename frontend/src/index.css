@@ -57,6 +57,16 @@
   --portal-sidebar-width: 260px;
 }
 
+/* Accessible Modal Dialog Pure CSS Scroll Containment */
+dialog:modal, [role="dialog"] {
+  overscroll-behavior: contain;
+}
+
+dialog::backdrop {
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
 /* ==========================================================================
    Base Typography & Scaling for Rural & Low-Vision Accessibility
    ========================================================================== */

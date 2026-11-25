@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { useLocationContext } from '../context/LocationContext';
+import { useToast } from '../context/ToastContext';
 import CivicLoader from '../components/CivicLoader';
 import { getProcessStepsForService } from '../utils/serviceProcessData';
 
@@ -169,11 +170,12 @@ export default function Services() {
     return list.length > 0 ? list : ['Khordha', 'Cuttack', 'Puri'];
   }, [locations]);
 
+  const toast = useToast();
   // Voice Search Handler
   const handleVoiceSearch = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      alert('Voice search is not supported in this browser.');
+      toast.warning('Voice search is not supported in this browser. Please use Chrome on mobile or desktop.');
       return;
     }
     const recognition = new SpeechRecognition();

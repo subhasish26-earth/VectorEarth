@@ -99,7 +99,7 @@ export function AccessibilityProvider({ children }) {
   const speakText = useCallback(
     (text, options = null) => {
       if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-        alert('Voice assistant is not supported in this browser. Please use Chrome, Edge, or Firefox.');
+        console.warn('Voice assistant is not supported in this browser. Please use Chrome, Edge, or Firefox.');
         return;
       }
 

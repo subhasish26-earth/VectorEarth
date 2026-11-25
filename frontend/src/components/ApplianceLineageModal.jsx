@@ -13,6 +13,15 @@ export default function ApplianceLineageModal({ isOpen, onClose, customerId }) {
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   const fetchLineage = async () => {
     setLoading(true);
     try {
@@ -28,8 +37,14 @@ export default function ApplianceLineageModal({ isOpen, onClose, customerId }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
-      <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-gray-100 max-h-[90vh] flex flex-col">
+    <div 
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overscroll-contain animate-in fade-in duration-150"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="lineage-modal-title"
+    >
+      <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-gray-100 max-h-[90vh] flex flex-col overscroll-contain animate-in zoom-in-95 duration-150">
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-gray-100">
           <div className="flex items-center gap-3">
@@ -37,7 +52,7 @@ export default function ApplianceLineageModal({ isOpen, onClose, customerId }) {
               <Wrench className="w-5 h-5 text-blue-800" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-blue-950">Household & Appliance Service Lineage</h2>
+              <h2 id="lineage-modal-title" className="text-lg font-bold text-blue-950">Household & Appliance Service Lineage</h2>
               <p className="text-xs text-gray-500">Official cooperative digital maintenance book & warranty log</p>
             </div>
           </div>

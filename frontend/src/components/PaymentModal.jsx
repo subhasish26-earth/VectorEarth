@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../services/api';
 import {
   CreditCard, QrCode, Building, CheckCircle2, AlertTriangle,
@@ -10,11 +10,31 @@ export default function PaymentModal({ isOpen = true, booking, onClose, onPaymen
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [paymentSuccess, setPaymentSuccess] = useState(null);
+  const modalRef = useRef(null);
+
+  const amount = Number(booking?.total_amount) || Number(booking?.amount) || 299;
+
+  // Platform-standard Escape key dismissal
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        handleFinish();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen]);
+
+  // Focus lock into modal on open
+  useEffect(() => {
+    if (isOpen && modalRef.current) {
+      modalRef.current.focus();
+    }
+  }, [isOpen]);
 
   if (isOpen === false) return null;
   if (!booking) return null;
-
-  const amount = Number(booking?.total_amount) || Number(booking?.amount) || 299;
 
   const handleProcessPayment = async (method) => {
     setLoading(true);
@@ -44,9 +64,16 @@ export default function PaymentModal({ isOpen = true, booking, onClose, onPaymen
   return (
     <div
       onClick={(e) => { if (e.target === e.currentTarget) handleFinish(); }}
-      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overscroll-contain animate-in fade-in duration-150"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="payment-modal-title"
     >
-      <div className="bg-white rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl space-y-0">
+      <div 
+        ref={modalRef}
+        tabIndex={-1}
+        className="bg-white rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl space-y-0 outline-hidden overscroll-contain animate-in zoom-in-95 duration-150"
+      >
         {/* Modal Header */}
         <div className="p-5 bg-blue-950 text-white flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -54,7 +81,7 @@ export default function PaymentModal({ isOpen = true, booking, onClose, onPaymen
               ₹
             </div>
             <div>
-              <h2 className="text-base font-bold">Cooperative Escrow Payment Gateway</h2>
+              <h2 id="payment-modal-title" className="text-base font-bold">Cooperative Escrow Payment Gateway</h2>
               <div className="text-[11px] text-blue-200">
                 Booking: <span className="font-mono">{booking?.booking_code}</span> • ₹{amount.toFixed(2)}
               </div>
@@ -63,7 +90,8 @@ export default function PaymentModal({ isOpen = true, booking, onClose, onPaymen
           <button
             type="button"
             onClick={handleFinish}
-            className="text-white/70 hover:text-white p-1 rounded-lg hover:bg-white/10"
+            className="text-white/70 hover:text-white p-1 rounded-lg hover:bg-white/10 transition"
+            aria-label="Close payment modal"
           >
             <X size={20} />
           </button>
@@ -110,16 +138,18 @@ export default function PaymentModal({ isOpen = true, booking, onClose, onPaymen
           /* Payment Selection Tabs */
           <div className="p-6 space-y-5">
             {error && (
-              <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg flex items-center gap-2">
+              <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg flex items-center gap-2" role="alert">
                 <AlertTriangle size={15} className="shrink-0" />
                 <span>{error}</span>
               </div>
             )}
 
             {/* Tab navigation */}
-            <div className="flex rounded-xl bg-gray-100 p-1 text-xs font-semibold">
+            <div className="flex rounded-xl bg-gray-100 p-1 text-xs font-semibold" role="tablist" aria-label="Payment Methods">
               <button
                 type="button"
+                role="tab"
+                aria-selected={activeTab === 'UPI'}
                 onClick={() => setActiveTab('UPI')}
                 className={`flex-1 py-2 rounded-lg transition ${
                   activeTab === 'UPI' ? 'bg-white text-blue-950 shadow-xs font-bold' : 'text-gray-600'
@@ -129,6 +159,8 @@ export default function PaymentModal({ isOpen = true, booking, onClose, onPaymen
               </button>
               <button
                 type="button"
+                role="tab"
+                aria-selected={activeTab === 'CARD'}
                 onClick={() => setActiveTab('CARD')}
                 className={`flex-1 py-2 rounded-lg transition ${
                   activeTab === 'CARD' ? 'bg-white text-blue-950 shadow-xs font-bold' : 'text-gray-600'
@@ -138,6 +170,8 @@ export default function PaymentModal({ isOpen = true, booking, onClose, onPaymen
               </button>
               <button
                 type="button"
+                role="tab"
+                aria-selected={activeTab === 'NET_BANKING'}
                 onClick={() => setActiveTab('NET_BANKING')}
                 className={`flex-1 py-2 rounded-lg transition ${
                   activeTab === 'NET_BANKING' ? 'bg-white text-blue-950 shadow-xs font-bold' : 'text-gray-600'

@@ -4,6 +4,7 @@ import { api } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
 import { useAccessibility } from '../context/AccessibilityContext';
 import { useLocationContext } from '../context/LocationContext';
+import { useToast } from '../context/ToastContext';
 import {
   Zap, Droplets, Hammer, Paintbrush, SprayCan, Flower2,
   HeartPulse, Car, Wrench, Home as HomeIcon, Settings, AlertTriangle,
@@ -268,10 +269,11 @@ export default function Home() {
     },
   ], [calculateAreaPrice]);
 
+  const toast = useToast();
   const handleVoiceSearch = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      alert('Voice search is not supported in this browser. Please use Chrome on mobile or desktop.');
+      toast.warning('Voice search is not supported in this browser. Please use Chrome on mobile or desktop.');
       return;
     }
     const recognition = new SpeechRecognition();

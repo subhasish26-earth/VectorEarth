@@ -143,22 +143,43 @@ export default function BookService() {
   const [showRouteMap, setShowRouteMap] = useState(false);
   const [customerCoords, setCustomerCoords] = useState({ lat: 20.3540, lng: 85.8170 });
 
-  // Live polling in Step 4 to auto-refresh booking when worker accepts
+  // Smart polling in Step 4 with progressive backoff and auto-stop
   useEffect(() => {
     if (currentStep !== 4 || !createdBooking?.id || createdBooking?.arrival_otp) return;
 
-    const interval = setInterval(async () => {
+    let isMounted = true;
+    let pollCount = 0;
+    const maxPolls = 60; // 5 minutes maximum safety window
+    let delay = 3000;
+    let timerId;
+
+    const poll = async () => {
+      if (!isMounted || pollCount >= maxPolls) return;
+      pollCount++;
       try {
-        const res = await api.getBookingById(createdBooking.id);
+        const res = await api.getBookingById(createdBooking.id, { noCache: true });
+        if (!isMounted) return;
         if (res?.booking && (res.booking.arrival_otp || res.booking.worker_id)) {
           setCreatedBooking(res.booking);
+          return; // Stop polling on successful artisan assignment
         }
       } catch (err) {
-        console.warn('Live polling booking update error:', err);
+        console.warn('Live booking dispatch check error:', err);
       }
-    }, 3000);
 
-    return () => clearInterval(interval);
+      // Progressive backoff: 3s -> 4s -> 5s (max 6s)
+      delay = Math.min(delay + 500, 6000);
+      if (isMounted && pollCount < maxPolls) {
+        timerId = setTimeout(poll, delay);
+      }
+    };
+
+    timerId = setTimeout(poll, delay);
+
+    return () => {
+      isMounted = false;
+      if (timerId) clearTimeout(timerId);
+    };
   }, [currentStep, createdBooking?.id, createdBooking?.arrival_otp]);
 
   // Advanced Semantic & Synonym Dictionary for Indian Civic & Home Repair Trades

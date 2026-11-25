@@ -1,6 +1,27 @@
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
+// In-memory request cache for high-frequency GET calls (prevents navigation flickers)
+const requestCache = new Map();
+const DEFAULT_CACHE_TTL = 30000; // 30 seconds
+
+export function clearApiCache() {
+  requestCache.clear();
+}
+
 export async function request(endpoint, options = {}) {
+  const method = (options.method || 'GET').toUpperCase();
+  const url = API_BASE.endsWith('/') 
+    ? `${API_BASE.slice(0, -1)}${endpoint}`
+    : `${API_BASE}${endpoint}`;
+
+  // Check cache for GET requests unless explicitly disabled
+  if (method === 'GET' && !options.noCache) {
+    const cached = requestCache.get(url);
+    if (cached && Date.now() - cached.timestamp < (options.ttl || DEFAULT_CACHE_TTL)) {
+      return cached.data;
+    }
+  }
+
   const token = localStorage.getItem('token');
   const headers = {
     'Content-Type': 'application/json',
@@ -17,10 +38,6 @@ export async function request(endpoint, options = {}) {
   if (config.body && typeof config.body === 'object' && !(config.body instanceof FormData)) {
     config.body = JSON.stringify(config.body);
   }
-
-  const url = API_BASE.endsWith('/') 
-    ? `${API_BASE.slice(0, -1)}${endpoint}`
-    : `${API_BASE}${endpoint}`;
 
   const response = await fetch(url, config);
   const data = await response.json().catch(() => ({}));
@@ -39,6 +56,13 @@ export async function request(endpoint, options = {}) {
     error.status = response.status;
     error.data = data;
     throw error;
+  }
+
+  // Cache successful GET requests; Invalidate cache on mutations
+  if (method === 'GET' && !options.noCache) {
+    requestCache.set(url, { data, timestamp: Date.now() });
+  } else if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
+    requestCache.clear();
   }
 
   return data;

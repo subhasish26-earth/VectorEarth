@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import {
   Printer, Building2, ShieldCheck, CheckCircle2,
   X, QrCode, FileText, Landmark
@@ -7,13 +7,28 @@ import {
 export default function TaxInvoiceModal({ isOpen = true, invoice, booking, onClose }) {
   const printRef = useRef();
 
+  // Escape key platform listener
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (isOpen === false) return null;
 
   const handlePrint = () => {
     window.print();
   };
 
-  // Resilient invoice data: use invoice object or synthesize from booking
+  // Resilient invoice data: use invoice object or synthesize from booking with 93-2-5 all-inclusive split
+  const fallbackTotal = Number(booking?.total_amount) || Number(booking?.amount) || 299;
+  const fallbackCoopFee = booking?.cooperative_fee !== undefined ? Number(booking.cooperative_fee) : Math.round(fallbackTotal * 0.05 * 100) / 100;
+  const fallbackPlatFee = booking?.platform_fee !== undefined ? Number(booking.platform_fee) : Math.round(fallbackTotal * 0.02 * 100) / 100;
+  const fallbackWage = booking?.amount !== undefined ? Number(booking.amount) : Math.round((fallbackTotal - fallbackCoopFee - fallbackPlatFee) * 100) / 100;
+
   const activeInvoice = invoice ? {
     ...invoice,
     society_name: invoice.society_name || booking?.society_name || 'Kalinga Labour Cooperative Society Ltd.',
@@ -39,12 +54,12 @@ export default function TaxInvoiceModal({ isOpen = true, invoice, booking, onClo
     worker_code: booking.worker_code || 'WKR-OD-1001',
     service_name: booking.service_name || 'Standard Cooperative Service',
     service_date: booking.scheduled_date || new Date().toISOString().split('T')[0],
-    amount: booking.amount || 299,
+    amount: fallbackWage,
     parts_cost: booking.parts_cost || 0,
     parts_details: booking.parts_details,
-    cooperative_fee: booking.cooperative_fee !== undefined ? booking.cooperative_fee : 14.95,
-    platform_fee: booking.platform_fee !== undefined ? booking.platform_fee : 5.98,
-    total_amount: booking.total_amount || 319.93,
+    cooperative_fee: fallbackCoopFee,
+    platform_fee: fallbackPlatFee,
+    total_amount: fallbackTotal,
     payment_status: booking.status === 'COMPLETED' ? 'PAID' : 'UNPAID / ESCROW HOLD',
     transaction_id: `TXN-OD-${booking.id}-2026`,
   } : null);
@@ -54,7 +69,10 @@ export default function TaxInvoiceModal({ isOpen = true, invoice, booking, onClo
   return (
     <div
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-      className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-start justify-center p-3 sm:p-6 pt-4 sm:pt-6 overflow-y-auto animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-start justify-center p-3 sm:p-6 pt-4 sm:pt-6 overflow-y-auto overscroll-contain animate-in fade-in duration-200"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="tax-invoice-modal-title"
     >
       <style>{`
         @media print {
@@ -90,7 +108,7 @@ export default function TaxInvoiceModal({ isOpen = true, invoice, booking, onClo
         <div className="p-3.5 sm:p-4 bg-slate-900 text-white flex items-center justify-between shrink-0 border-b border-slate-800 no-print z-10">
           <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-slate-100">
             <FileText size={16} className="text-amber-400 shrink-0" />
-            <span>Official Cooperative Tax Invoice</span>
+            <span id="tax-invoice-modal-title">Official Cooperative Tax Invoice</span>
           </div>
 
           <div className="flex items-center gap-2">

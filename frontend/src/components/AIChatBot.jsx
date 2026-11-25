@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
+import { useToast } from '../context/ToastContext';
 
 const SESSION_STORAGE_KEY = 'prithvi_fix_ai_chat_session';
 
@@ -153,11 +154,12 @@ export default function AIChatBot() {
     }
   };
 
+  const toast = useToast();
   // Voice Input (Speech-to-Text)
   const handleVoiceInput = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      alert('Voice speech recognition is not supported in this browser. Please type your message.');
+      toast.warning('Voice speech recognition is not supported in this browser. Please type your message.');
       return;
     }
 

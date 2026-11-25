@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
+import { useToast } from '../context/ToastContext';
 import CivicLoader from '../components/CivicLoader';
 import {
   Search, ShieldCheck, Star, MapPin, Award, CheckCircle2,
@@ -65,11 +66,12 @@ export default function FindWorker() {
     fetchWorkers();
   };
 
+  const toast = useToast();
   // Speech Recognition Search for Rural Citizens
   const handleVoiceSearch = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      alert('Voice search is not supported in this browser. Please use Chrome on mobile or desktop.');
+      toast.warning('Voice search is not supported in this browser. Please use Chrome on mobile or desktop.');
       return;
     }
     const recognition = new SpeechRecognition();

@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { AccessibilityProvider } from './context/AccessibilityContext';
 import { LocationProvider } from './context/LocationContext';
+import { ToastProvider } from './context/ToastContext';
 import GovLayout from './layouts/GovLayout';
 import PortalLayout from './layouts/PortalLayout';
 import AIChatBot from './components/AIChatBot';
@@ -368,10 +369,12 @@ export default function App() {
           <AccessibilityProvider>
             <AuthProvider>
               <LocationProvider>
-                <SessionSecurityGuard />
-                <AppRoutes />
-                {/* Global Floating AI Assistant (Persists until window closed) */}
-                <AIChatBot />
+                <ToastProvider>
+                  <SessionSecurityGuard />
+                  <AppRoutes />
+                  {/* Global Floating AI Assistant (Persists until window closed) */}
+                  <AIChatBot />
+                </ToastProvider>
               </LocationProvider>
             </AuthProvider>
           </AccessibilityProvider>

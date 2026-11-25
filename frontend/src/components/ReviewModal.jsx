@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import {
   Star, CheckCircle2, AlertTriangle, X, HeartHandshake,
@@ -22,6 +22,15 @@ export default function ReviewModal({ isOpen, booking, onClose, onReviewSubmitte
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [submitted, setSubmitted] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
   if (!booking) return null;
@@ -67,13 +76,16 @@ export default function ReviewModal({ isOpen, booking, onClose, onReviewSubmitte
   return (
     <div
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overscroll-contain animate-in fade-in duration-150"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="review-modal-title"
     >
-      <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+      <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 overscroll-contain animate-in zoom-in-95 duration-150">
         <div className="flex items-center justify-between border-b pb-3">
           <div className="flex items-center gap-2">
             <HeartHandshake className="w-5 h-5 text-blue-900" />
-            <h3 className="font-bold text-sm text-blue-950">Rate Cooperative Service</h3>
+            <h3 id="review-modal-title" className="font-bold text-sm text-blue-950">Rate Cooperative Service</h3>
           </div>
           <button
             type="button"
