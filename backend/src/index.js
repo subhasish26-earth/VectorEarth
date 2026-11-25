@@ -332,6 +332,9 @@ async function startServer() {
   process.on('SIGINT', shutdown);
 }
 
-startServer();
+// Only bind to local port when running standalone, not in Vercel Serverless
+if (!process.env.VERCEL) {
+  startServer();
+}
 
 module.exports = app;
