@@ -1,0 +1,30 @@
+name: prithvi_fix_app
+description: "Prithvi Fix — Urban Company Standard Cooperative On-Demand Services Platform"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_map: ^8.3.2
+  latlong2: ^0.10.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/branding/
+    - assets/onboarding/
+    - assets/banners/
+    - assets/categories/
+    - assets/services/
+    - assets/trust/
+    - assets/tracking/
+    - assets/states/
