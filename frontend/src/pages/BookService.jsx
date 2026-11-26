@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useToast } from '../context/ToastContext';
 import {
   ShieldCheck, AlertTriangle, CheckCircle2, Star, MapPin,
   Calendar, Clock, User, Users, ArrowRight, ArrowLeft, Zap, Check,
@@ -17,6 +18,7 @@ import { useLocationContext } from '../context/LocationContext';
 
 export default function BookService() {
   const { t } = useLanguage();
+  const toast = useToast();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user, isAuthenticated, login } = useAuth();
@@ -28,6 +30,7 @@ export default function BookService() {
   const [services, setServices] = useState([]);
   const [societies, setSocieties] = useState([]);
   const [selectedService, setSelectedService] = useState(null);
+  const [serviceSwitchWarning, setServiceSwitchWarning] = useState(null);
   const [recommendedWorkers, setRecommendedWorkers] = useState([]);
   const [selectedWorker, setSelectedWorker] = useState(null);
   const [autoAssign, setAutoAssign] = useState(true);
@@ -630,6 +633,30 @@ export default function BookService() {
     }
   };
 
+  // Enforce Single Service Item Policy with Statutory Warning
+  const handleSelectServiceItem = (svc) => {
+    if (selectedService && selectedService.id !== svc.id) {
+      // Customer has already picked an item and is attempting to select a 2nd item
+      setServiceSwitchWarning({
+        currentService: selectedService,
+        newService: svc,
+      });
+      toast?.warning?.(`Warning: Only one item can be booked per order. Please confirm to switch services.`, 4500);
+      return;
+    }
+    const isEmergency = svc.category === 'Emergency Services';
+    setSelectedService(svc);
+    setMatchedDiagnosis({
+      serviceName: svc.name,
+      trade: svc.category,
+      likelyParts: getLikelyPartsForTrade(svc.category, svc.name),
+      standardTariff: `Cooperative Regulated • ₹${svc.base_price}`,
+    });
+    if (isEmergency) {
+      setFormData((prev) => ({ ...prev, isEmergency: true }));
+    }
+  };
+
   // Dynamic Cooperative Tariff Calculation
   const selectedSoc = societies.find((s) => String(s.id) === String(formData.societyId));
   const workerWagePct = selectedSoc?.worker_wage_share_pct ? Number(selectedSoc.worker_wage_share_pct) : 93.0;
@@ -902,6 +929,21 @@ export default function BookService() {
             )}
           </div>
 
+          {/* Statutory Booking Limit Banner */}
+          <div className="p-3 bg-amber-50/80 border border-amber-200/90 rounded-2xl flex items-center justify-between gap-3 text-xs text-amber-950">
+            <div className="flex items-center gap-2">
+              <AlertTriangle size={15} className="text-amber-600 shrink-0" />
+              <span className="text-[11px] leading-relaxed">
+                <strong className="font-bold text-amber-900">One Item per Booking:</strong> Under cooperative regulations, only one service item can be booked per order to ensure dedicated trade-certified artisan assignment. For multiple services, please book separate orders.
+              </span>
+            </div>
+            {selectedService && (
+              <span className="shrink-0 text-[10px] font-extrabold bg-amber-200 text-amber-900 px-2.5 py-1 rounded-full border border-amber-300">
+                1 Item Selected
+              </span>
+            )}
+          </div>
+
           {/* Filtered Services Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 max-h-[480px] overflow-y-auto pr-1">
             {filteredServices.map((svc) => {
@@ -911,68 +953,134 @@ export default function BookService() {
               return (
                 <div
                   key={svc.id}
-                  onClick={() => {
-                    setSelectedService(svc);
-                    setMatchedDiagnosis({
-                      serviceName: svc.name,
-                      trade: svc.category,
-                      likelyParts: getLikelyPartsForTrade(svc.category, svc.name),
-                      standardTariff: `Cooperative Regulated • ₹${svc.base_price}`,
-                    });
-                    if (isEmergency) {
-                      setFormData((prev) => ({ ...prev, isEmergency: true }));
-                    }
-                  }}
-                    className={`p-4 rounded-2xl border cursor-pointer transition-all duration-200 flex flex-col justify-between ${
-                      isSelected
-                        ? 'border-[#0F294A] bg-blue-50/70 ring-2 ring-[#0F294A] shadow-md scale-[1.01]'
-                        : isEmergency
-                        ? 'border-red-200 bg-red-50/30 hover:border-red-400 hover:shadow-xs'
-                        : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50/70 hover:shadow-xs'
-                    }`}
-                  >
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase bg-slate-100 text-slate-700">
-                          {svc.category}
-                        </span>
-                        {svc.is_complex ? (
-                          <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/80">
-                            Master Paired
-                          </span>
-                        ) : null}
-                      </div>
-                      <h4 className="font-extrabold text-xs text-slate-900 mb-1">{svc.name}</h4>
-                      <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">{svc.description}</p>
-                    </div>
-
-                    <div className="pt-2.5 mt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                      <span className={`text-[11px] font-medium ${(svc.available_workers ?? 0) > 0 ? 'text-slate-500' : 'text-amber-600'}`}>
-                        {svc.available_workers ?? 0} {t('verifiedArtisans')}
+                  onClick={() => handleSelectServiceItem(svc)}
+                  className={`p-4 rounded-2xl border cursor-pointer transition-all duration-200 flex flex-col justify-between ${
+                    isSelected
+                      ? 'border-[#0F294A] bg-blue-50/70 ring-2 ring-[#0F294A] shadow-md scale-[1.01]'
+                      : isEmergency
+                      ? 'border-red-200 bg-red-50/30 hover:border-red-400 hover:shadow-xs'
+                      : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50/70 hover:shadow-xs'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase bg-slate-100 text-slate-700">
+                        {svc.category}
                       </span>
-                      <span className="font-black text-[#0F294A] text-sm font-mono">₹{svc.base_price}</span>
+                      {svc.is_complex ? (
+                        <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/80">
+                          Master Paired
+                        </span>
+                      ) : null}
                     </div>
+                    <h4 className="font-extrabold text-xs text-slate-900 mb-1">{svc.name}</h4>
+                    <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">{svc.description}</p>
                   </div>
-                );
-              })}
-            </div>
+
+                  <div className="pt-2.5 mt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                    <span className={`text-[11px] font-medium ${(svc.available_workers ?? 0) > 0 ? 'text-slate-500' : 'text-amber-600'}`}>
+                      {svc.available_workers ?? 0} {t('verifiedArtisans')}
+                    </span>
+                    <span className="font-black text-[#0F294A] text-sm font-mono">₹{svc.base_price}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
 
           <div className="pt-3 flex items-center justify-between border-t border-gray-100">
             <span className="text-xs text-gray-500">
               {selectedService ? (
-                <>Selected: <strong className="text-blue-950">{selectedService.name}</strong> (₹{selectedService.base_price})</>
-              ) : 'Please select a service above'}
+                <>
+                  Selected: <strong className="text-blue-950">{selectedService.name}</strong> (₹{selectedService.base_price})
+                  <span className="block text-[11px] text-amber-800 font-semibold mt-0.5">
+                    ⚠️ Order limit: 1 item. Clicking another service will prompt to switch.
+                  </span>
+                </>
+              ) : 'Please select a service above (Limit: 1 service per order)'}
             </span>
 
             <button
               type="button"
               disabled={!selectedService}
               onClick={() => setCurrentStep(2)}
-              className="btn btn-primary flex items-center gap-2 text-xs font-bold px-6 py-2.5 shadow-sm disabled:opacity-50"
+              className="btn btn-primary flex items-center gap-2 text-xs font-bold px-6 py-2.5 shadow-sm disabled:opacity-50 cursor-pointer"
             >
               <span>{t('btnContinueQuote')}</span> <ArrowRight size={14} />
             </button>
           </div>
+
+          {/* ─────────────────────────────────────────────────────────────
+              SERVICE SWITCH WARNING MODAL (ONLY ONE ITEM CAN BE BOOKED)
+             ───────────────────────────────────────────────────────────── */}
+          {serviceSwitchWarning && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="order-limit-warning-title"
+            >
+              <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-amber-200 space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                    <AlertTriangle size={24} />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                      Order Limit Policy
+                    </span>
+                    <h3 id="order-limit-warning-title" className="text-base font-extrabold text-slate-950 mt-0.5">
+                      Only One Item Can Be Booked
+                    </h3>
+                  </div>
+                </div>
+
+                <div className="p-3.5 bg-amber-50/70 rounded-2xl border border-amber-200/90 text-xs text-slate-700 space-y-2">
+                  <p className="font-semibold text-amber-950">
+                    Current Service: <span className="font-extrabold text-slate-900">{serviceSwitchWarning.currentService.name}</span> (₹{serviceSwitchWarning.currentService.base_price})
+                  </p>
+                  <p className="text-[11px] leading-relaxed text-slate-600">
+                    Under statutory cooperative regulations, <strong>only one service item can be booked per work order</strong>. This ensures certified single-trade artisan assignment, dedicated warranty coverage, and anti-fraud dual-OTP verification.
+                  </p>
+                  <p className="text-[11px] font-medium text-amber-900">
+                    💡 If you need multiple services across different trades, please complete this booking first or create a separate booking.
+                  </p>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newSvc = serviceSwitchWarning.newService;
+                      const isEmerg = newSvc.category === 'Emergency Services';
+                      setSelectedService(newSvc);
+                      setMatchedDiagnosis({
+                        serviceName: newSvc.name,
+                        trade: newSvc.category,
+                        likelyParts: getLikelyPartsForTrade(newSvc.category, newSvc.name),
+                        standardTariff: `Cooperative Regulated • ₹${newSvc.base_price}`,
+                      });
+                      if (isEmerg) {
+                        setFormData((prev) => ({ ...prev, isEmergency: true }));
+                      }
+                      toast?.info?.(`Updated order to "${newSvc.name}".`, 3500);
+                      setServiceSwitchWarning(null);
+                    }}
+                    className="flex-1 px-4 py-2.5 rounded-xl bg-[#0F294A] text-white font-bold text-xs hover:bg-[#163a66] transition shadow-xs text-center cursor-pointer"
+                  >
+                    Switch to {serviceSwitchWarning.newService.name}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setServiceSwitchWarning(null)}
+                    className="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs hover:bg-slate-200 transition text-center cursor-pointer"
+                  >
+                    Keep Current Item
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

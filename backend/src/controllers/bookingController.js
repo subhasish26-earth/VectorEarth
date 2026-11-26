@@ -65,6 +65,16 @@ async function createBooking(req, res) {
       return res.status(400).json({ error: 'Validation Error', message: 'Service selection is required.' });
     }
 
+    // Single Item Order Policy Enforcement
+    if ((Array.isArray(req.body.service_ids) && req.body.service_ids.length > 1) ||
+        (Array.isArray(req.body.services) && req.body.services.length > 1) ||
+        (Array.isArray(req.body.items) && req.body.items.length > 1)) {
+      return res.status(400).json({
+        error: 'Validation Error',
+        message: 'Only one item can be booked per work order under cooperative guild regulations.',
+      });
+    }
+
     const serviceRes = await query('SELECT * FROM services WHERE id = $1', [serviceId]);
     const service = serviceRes.rows[0];
     if (!service) {
